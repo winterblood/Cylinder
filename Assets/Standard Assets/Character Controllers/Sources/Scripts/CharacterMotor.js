@@ -396,24 +396,27 @@ private function ApplyGravityAndJumping (velocity : Vector3) {
 	if (inputJump && jumping.lastButtonDownTime < 0 && canControl)
 		jumping.lastButtonDownTime = Time.time;
 	
-	if (grounded)
-		velocity.y = Mathf.Min(0, velocity.y) - movement.gravity * Time.deltaTime;
-	else {
-		velocity.y = movement.velocity.y - movement.gravity * Time.deltaTime;
-		
-		// When jumping up we don't apply gravity for some time when the user is holding the jump button.
-		// This gives more control over jump height by pressing the button longer.
-		if (jumping.jumping && jumping.holdingJumpButton) {
-			// Calculate the duration that the extra jump force should have effect.
-			// If we're still less than that duration after the jumping time, apply the force.
-			if (Time.time < jumping.lastStartTime + jumping.extraHeight / CalculateJumpVerticalSpeed(jumping.baseHeight)) {
-				// Negate the gravity we just applied, except we push in jumpDir rather than jump upwards.
-				velocity += jumping.jumpDir * movement.gravity * Time.deltaTime;
+	if (movement.gravity != 0)
+	{
+		if (grounded)
+			velocity.y = Mathf.Min(0, velocity.y) - movement.gravity * Time.deltaTime;
+		else {
+			velocity.y = movement.velocity.y - movement.gravity * Time.deltaTime;
+			
+			// When jumping up we don't apply gravity for some time when the user is holding the jump button.
+			// This gives more control over jump height by pressing the button longer.
+			if (jumping.jumping && jumping.holdingJumpButton) {
+				// Calculate the duration that the extra jump force should have effect.
+				// If we're still less than that duration after the jumping time, apply the force.
+				if (Time.time < jumping.lastStartTime + jumping.extraHeight / CalculateJumpVerticalSpeed(jumping.baseHeight)) {
+					// Negate the gravity we just applied, except we push in jumpDir rather than jump upwards.
+					velocity += jumping.jumpDir * movement.gravity * Time.deltaTime;
+				}
 			}
+			
+			// Make sure we don't fall any faster than maxFallSpeed. This gives our character a terminal velocity.
+			velocity.y = Mathf.Max (velocity.y, -movement.maxFallSpeed);
 		}
-		
-		// Make sure we don't fall any faster than maxFallSpeed. This gives our character a terminal velocity.
-		velocity.y = Mathf.Max (velocity.y, -movement.maxFallSpeed);
 	}
 		
 	if (grounded) {
@@ -501,14 +504,14 @@ private function MoveWithPlatform () : boolean {
 
 private function GetDesiredHorizontalVelocity () {
 	// Find desired velocity
-	var desiredLocalDirection : Vector3 = tr.InverseTransformDirection(inputMoveDirection);
+	var desiredLocalDirection : Vector3 = Camera.main.transform.InverseTransformDirection(inputMoveDirection);
 	var maxSpeed : float = MaxSpeedInDirection(desiredLocalDirection);
 	if (grounded) {
 		// Modify max speed on slopes based on slope speed multiplier curve
 		var movementSlopeAngle = Mathf.Asin(movement.velocity.normalized.y)  * Mathf.Rad2Deg;
 		maxSpeed *= movement.slopeSpeedMultiplier.Evaluate(movementSlopeAngle);
 	}
-	return tr.TransformDirection(desiredLocalDirection * maxSpeed);
+	return Camera.main.transform.TransformDirection(desiredLocalDirection * maxSpeed);
 }
 
 private function AdjustGroundVelocityToNormal (hVelocity : Vector3, groundNormal : Vector3) : Vector3 {
